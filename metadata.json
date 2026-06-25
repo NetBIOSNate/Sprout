@@ -1,0 +1,6 @@
+{
+  "name": "Sprout",
+  "description": "An interactive digital plant care tracker and nursery featuring an AI botany Care Almanac backed by Gemini AI to fetch dynamic lighting profiles, pet safety advice, and detailed care manuals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
