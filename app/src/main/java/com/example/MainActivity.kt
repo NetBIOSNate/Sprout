@@ -14,11 +14,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -67,6 +69,13 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import com.example.data.Friend
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.example.ui.PlantAlert
+import com.example.ui.AlertType
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,6 +83,7 @@ class MainActivity : ComponentActivity() {
         
         // Force widget update to sync up launcher widgets immediately
         SproutWidgetProvider.triggerUpdate(this)
+        LargeFlowerWidgetProvider.triggerUpdate(this)
 
         setContent {
             val viewModel: SproutViewModel = viewModel()
@@ -512,6 +522,15 @@ fun SproutApp(viewModel: SproutViewModel) {
     val alerts by viewModel.plantAlerts.collectAsState()
     val context = LocalContext.current
 
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val permissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { _ -> }
+        LaunchedEffect(Unit) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     var toastMessage by remember { mutableStateOf<String?>(null) }
     toastMessage?.let {
         Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
@@ -539,20 +558,33 @@ fun SproutApp(viewModel: SproutViewModel) {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                when (currentScreen) {
-                    is Screen.Home -> HomeScreen(viewModel)
-                    is Screen.Nursery -> NurseryScreen(viewModel)
-                    is Screen.MyGarden -> GardenScreen(viewModel)
-                    is Screen.Stats -> StatsScreen(viewModel)
-                    is Screen.Settings -> SettingsScreen(viewModel)
-                    is Screen.PurchaseSeeds -> PurchaseSeedsScreen(viewModel)
-                    is Screen.Friends -> FriendsScreen(viewModel)
-                    is Screen.Login -> LoginScreen(viewModel)
-                    is Screen.PlantDetail -> PlantDetailScreen(
-                        viewModel = viewModel,
-                        plantId = currentScreen.plantId
-                    )
-                    is Screen.CareGuides -> CareGuidesScreen(viewModel)
+                AnimatedContent(
+                    targetState = currentScreen,
+                    label = "ScreenTransition",
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(300)) + slideInVertically(
+                            animationSpec = tween(400),
+                            initialOffsetY = { it / 16 }
+                        )).togetherWith(
+                            fadeOut(animationSpec = tween(300))
+                        )
+                    }
+                ) { targetScreen ->
+                    when (targetScreen) {
+                        is Screen.Home -> HomeScreen(viewModel)
+                        is Screen.Nursery -> NurseryScreen(viewModel)
+                        is Screen.MyGarden -> GardenScreen(viewModel)
+                        is Screen.Stats -> StatsScreen(viewModel)
+                        is Screen.Settings -> SettingsScreen(viewModel)
+                        is Screen.PurchaseSeeds -> PurchaseSeedsScreen(viewModel)
+                        is Screen.Friends -> FriendsScreen(viewModel)
+                        is Screen.Login -> LoginScreen(viewModel)
+                        is Screen.PlantDetail -> PlantDetailScreen(
+                            viewModel = viewModel,
+                            plantId = targetScreen.plantId
+                        )
+                        is Screen.CareGuides -> CareGuidesScreen(viewModel)
+                    }
                 }
                 
                 if (alerts.isNotEmpty()) {
@@ -560,19 +592,50 @@ fun SproutApp(viewModel: SproutViewModel) {
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(horizontal = 16.dp, vertical = 32.dp)
+                            .windowInsetsPadding(WindowInsets.statusBars),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        alerts.forEach { alertMsg ->
-                            androidx.compose.material3.Snackbar(
-                                action = {
-                                    androidx.compose.material3.TextButton(onClick = { viewModel.dismissAlert(alertMsg) }) {
-                                        Text("Dismiss", color = MaterialTheme.colorScheme.inversePrimary)
+                        alerts.take(2).forEach { alert ->
+                            key(alert.id) {
+                                LaunchedEffect(alert.id) {
+                                    delay(4000)
+                                    viewModel.dismissAlert(alert.id)
+                                }
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(android.graphics.Color.parseColor(alert.type.colorHex))
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = alert.message,
+                                            color = Color.White,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.weight(1f).padding(end = 12.dp)
+                                        )
+                                        IconButton(
+                                            onClick = { viewModel.dismissAlert(alert.id) },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Dismiss",
+                                                tint = Color.White
+                                            )
+                                        }
                                     }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(alertMsg)
+                                }
                             }
                         }
                     }
@@ -588,68 +651,79 @@ fun SproutBottomNavigation(
     currentScreen: Screen,
     onTabSelected: (Screen) -> Unit
 ) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        tonalElevation = 8.dp,
+    Box(
         modifier = Modifier
+            .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+            .padding(horizontal = 24.dp, vertical = 16.dp), // Floating style
+        contentAlignment = Alignment.BottomCenter
     ) {
-        NavigationBarItem(
-            selected = currentScreen is Screen.Home,
-            onClick = { onTabSelected(Screen.Home) },
-            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-            label = { Text("Home", style = MaterialTheme.typography.labelSmall) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                indicatorColor = MaterialTheme.colorScheme.primary
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            tonalElevation = 12.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(32.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(32.dp))
+                .height(72.dp)
+        ) {
+            NavigationBarItem(
+                selected = currentScreen is Screen.Home,
+                onClick = { onTabSelected(Screen.Home) },
+                icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                label = { Text("Home", style = MaterialTheme.typography.labelSmall) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary
+                )
             )
-        )
-        NavigationBarItem(
-            selected = currentScreen is Screen.Nursery,
-            onClick = { onTabSelected(Screen.Nursery) },
-            icon = { Icon(Icons.Default.MenuBook, contentDescription = "Nursery") },
-            label = { Text("Nursery", style = MaterialTheme.typography.labelSmall) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                indicatorColor = MaterialTheme.colorScheme.primary
+            NavigationBarItem(
+                selected = currentScreen is Screen.Nursery,
+                onClick = { onTabSelected(Screen.Nursery) },
+                icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Nursery") },
+                label = { Text("Nursery", style = MaterialTheme.typography.labelSmall) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary
+                )
             )
-        )
-        NavigationBarItem(
-            selected = currentScreen is Screen.MyGarden,
-            onClick = { onTabSelected(Screen.MyGarden) },
-            icon = { Icon(Icons.Default.LocalFlorist, contentDescription = "Garden") },
-            label = { Text("Garden", style = MaterialTheme.typography.labelSmall) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                indicatorColor = MaterialTheme.colorScheme.primary
+            NavigationBarItem(
+                selected = currentScreen is Screen.MyGarden,
+                onClick = { onTabSelected(Screen.MyGarden) },
+                icon = { Icon(Icons.Default.LocalFlorist, contentDescription = "Garden") },
+                label = { Text("Garden", style = MaterialTheme.typography.labelSmall) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary
+                )
             )
-        )
-        NavigationBarItem(
-            selected = currentScreen is Screen.Friends,
-            onClick = { onTabSelected(Screen.Friends) },
-            icon = { Icon(Icons.Default.People, contentDescription = "Companions") },
-            label = { Text("Friends", style = MaterialTheme.typography.labelSmall) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                indicatorColor = MaterialTheme.colorScheme.primary
+            NavigationBarItem(
+                selected = currentScreen is Screen.Friends,
+                onClick = { onTabSelected(Screen.Friends) },
+                icon = { Icon(Icons.Default.People, contentDescription = "Companions") },
+                label = { Text("Friends", style = MaterialTheme.typography.labelSmall) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary
+                )
             )
-        )
-        NavigationBarItem(
-            selected = currentScreen is Screen.Stats,
-            onClick = { onTabSelected(Screen.Stats) },
-            icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-            label = { Text("Profile", style = MaterialTheme.typography.labelSmall) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                indicatorColor = MaterialTheme.colorScheme.primary
+            NavigationBarItem(
+                selected = currentScreen is Screen.Stats,
+                onClick = { onTabSelected(Screen.Stats) },
+                icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                label = { Text("Profile", style = MaterialTheme.typography.labelSmall) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary
+                )
             )
-        )
+        }
     }
 }
 
@@ -1162,7 +1236,7 @@ fun HomeScreen(viewModel: SproutViewModel) {
                                         .clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.primary)
                                 ) {
-                                    Icon(Icons.Default.ArrowForward, contentDescription = "Go to Details", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Go to Details", tint = MaterialTheme.colorScheme.onPrimary)
                                 }
                             }
 
@@ -1920,6 +1994,44 @@ fun NurseryScreen(viewModel: SproutViewModel) {
             }
         }
 
+        // Nursery Hero Banner
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 20.dp)
+                .height(160.dp)
+                .shadowAmbient(),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                AsyncImage(
+                    model = "https://image.pollinations.ai/prompt/beautiful_lush_greenhouse_botanical_garden_nursery_with_glowing_light_rays_vector_art_warm_aesthetic?width=800&height=400&nologo=true",
+                    contentDescription = "Nursery Hero",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))
+                            )
+                        )
+                )
+                Text(
+                    text = "Discover New Species",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(20.dp)
+                )
+            }
+        }
+
         // Search Bar
         OutlinedTextField(
             value = searchQuery,
@@ -2659,9 +2771,18 @@ fun StatsScreen(viewModel: SproutViewModel) {
     val plants by viewModel.plants.collectAsState()
     val collectedPlants = plants.filter { it.isCollected }
 
-    // Mock interactive chart values
-    var selectedBarDay by remember { mutableStateOf<String?>("Dec 2") }
-    var selectedBarProgress by remember { mutableStateOf<Int>(85) }
+    // Interactive chart values based on user's plants
+    var selectedBarLabel by remember { mutableStateOf<String?>("") }
+    var selectedBarProgress by remember { mutableStateOf<Int>(0) }
+    
+    // Update default selection when plants load
+    LaunchedEffect(collectedPlants) {
+        if (collectedPlants.isNotEmpty() && selectedBarLabel.isNullOrEmpty()) {
+            val firstPlant = collectedPlants.first()
+            selectedBarLabel = firstPlant.name
+            selectedBarProgress = (firstPlant.waterProgress * 100).toInt()
+        }
+    }
 
     var activeTab by remember { mutableStateOf("Stats") } // "Stats", "Achievements", "Custom"
 
@@ -2684,15 +2805,14 @@ fun StatsScreen(viewModel: SproutViewModel) {
                     modifier = Modifier
                         .size(64.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                        .background(Color(profile?.avatarColor ?: 0xFF4CAF50.toInt())),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Preloaded premium face profile avatar
-                    AsyncImage(
-                        model = "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&q=80&w=200",
-                        contentDescription = "Profile Pic",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                    Text(
+                        text = profile?.name?.take(1)?.uppercase() ?: "S",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
                     )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
@@ -2781,7 +2901,7 @@ fun StatsScreen(viewModel: SproutViewModel) {
                     ) {
                         StatCard(
                             title = "Total Waterings",
-                            value = "${profile?.totalWaterings ?: 1204}",
+                            value = "${profile?.totalWaterings ?: 0}",
                             icon = Icons.Default.WaterDrop,
                             backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
                             modifier = Modifier.weight(1f)
@@ -2789,7 +2909,7 @@ fun StatsScreen(viewModel: SproutViewModel) {
 
                         StatCard(
                             title = "Watering Streak",
-                            value = "${profile?.wateringStreak ?: 14} Days",
+                            value = "${profile?.wateringStreak ?: 0} Days",
                             icon = Icons.Default.LocalFlorist,
                             backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
                             modifier = Modifier.weight(1f)
@@ -2803,7 +2923,7 @@ fun StatsScreen(viewModel: SproutViewModel) {
                     ) {
                         StatCard(
                             title = "Seeds Planted",
-                            value = "${profile?.seedsPlanted ?: 56}",
+                            value = "${profile?.seedsPlanted ?: 0}",
                             icon = Icons.Default.Eco,
                             backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             modifier = Modifier.weight(1f)
@@ -2811,7 +2931,7 @@ fun StatsScreen(viewModel: SproutViewModel) {
 
                         StatCard(
                             title = "Matured Flora",
-                            value = "${profile?.plantsMatured ?: 18}",
+                            value = "${profile?.plantsMatured ?: 0}",
                             icon = Icons.Default.Star,
                             backgroundColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
                             modifier = Modifier.weight(1f)
@@ -2839,13 +2959,13 @@ fun StatsScreen(viewModel: SproutViewModel) {
                         ) {
                             Column {
                                 Text(
-                                    "Growth Progress",
+                                    "Hydration Levels",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
-                                    "Over last 30 days",
+                                    "Your active garden",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.outline
                                 )
@@ -2856,7 +2976,7 @@ fun StatsScreen(viewModel: SproutViewModel) {
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text(
-                                    text = "$selectedBarDay: $selectedBarProgress%",
+                                    text = "${selectedBarLabel ?: "None"}: $selectedBarProgress%",
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary,
@@ -2875,38 +2995,46 @@ fun StatsScreen(viewModel: SproutViewModel) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.Bottom
                         ) {
-                            val days = listOf("Nov 28", "Nov 29", "Nov 30", "Dec 1", "Dec 2", "Dec 3", "Dec 4")
-                            val levels = listOf(45, 60, 50, 75, 85, 70, 95)
-
-                            days.forEachIndexed { i, day ->
-                                val level = levels[i]
-                                val isSelected = selectedBarDay == day
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable {
-                                            selectedBarDay = day
-                                            selectedBarProgress = level
-                                        }
-                                ) {
-                                    Box(
+                            val chartPlants = collectedPlants.take(7)
+                            if (chartPlants.isEmpty()) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text("Plant seeds to see hydration levels!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                }
+                            } else {
+                                chartPlants.forEach { plant ->
+                                    val level = (plant.waterProgress * 100).toInt().coerceIn(5, 100) // min 5% for visual
+                                    val isSelected = selectedBarLabel == plant.name
+                                    val shortName = if (plant.name.length > 5) plant.name.take(3) + ".." else plant.name
+                                    
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier
-                                            .width(16.dp)
-                                            .fillMaxHeight(fraction = level / 100f)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(
-                                                if (isSelected) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                                            )
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = day.split(" ")[1],
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.outline,
-                                        fontSize = 10.sp
-                                    )
+                                            .weight(1f)
+                                            .clickable {
+                                                selectedBarLabel = plant.name
+                                                selectedBarProgress = (plant.waterProgress * 100).toInt()
+                                            }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(16.dp)
+                                                .fillMaxHeight(fraction = level / 100f)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(
+                                                    if (isSelected) MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                                )
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = shortName,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.outline,
+                                            fontSize = 10.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -3585,24 +3713,24 @@ fun SettingsScreen(viewModel: SproutViewModel) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 24.dp, vertical = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
                 onClick = { viewModel.navigateBack() },
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Text(
                 text = "Settings",
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
@@ -3612,35 +3740,46 @@ fun SettingsScreen(viewModel: SproutViewModel) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // Group 1: General Preferences
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(28.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
                 modifier = Modifier.shadowAmbient()
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(modifier = Modifier.padding(24.dp)) {
                     Text(
                         "Theme & Aesthetics",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(bottom = 16.dp)
                     )
 
                     // Switch 1: Dark Mode
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text("Dark Theme", style = MaterialTheme.typography.labelMedium)
-                            Text("Use eye-safe dark slate palette background", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.DarkMode, contentDescription = "Dark Mode", tint = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text("Dark Theme", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text("Eye-safe dark slate palette", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            }
                         }
                         Switch(
                             checked = profile?.isDarkMode ?: false,
@@ -3648,17 +3787,30 @@ fun SettingsScreen(viewModel: SproutViewModel) {
                         )
                     }
 
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
                     // Switch 2: Notifications
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text("Watering Alerts", style = MaterialTheme.typography.labelMedium)
-                            Text("Remind me when leaves are dry", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.NotificationsActive, contentDescription = "Notifications", tint = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text("Watering Alerts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text("Remind me when leaves are dry", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            }
                         }
                         Switch(
                             checked = profile?.notificationEnabled ?: true,
@@ -3670,41 +3822,60 @@ fun SettingsScreen(viewModel: SproutViewModel) {
 
             // Group 2: Account details
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(28.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
                 modifier = Modifier.shadowAmbient()
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(modifier = Modifier.padding(24.dp)) {
                     Text(
                         "Gardening Environment",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    val environments = listOf("Tundra", "Desert", "Nebula", "Tropical")
-                    environments.forEach { env ->
+                    val environments = listOf("Tundra" to Icons.Default.AcUnit, "Desert" to Icons.Default.WbSunny, "Nebula" to Icons.Default.AutoAwesome, "Tropical" to Icons.Default.Park)
+                    environments.forEachIndexed { index, (env, icon) ->
                         val isSelected = profile?.defaultEnvironment == env
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
                                 .clickable { viewModel.updateDefaultEnvironment(env) }
-                                .padding(vertical = 12.dp),
+                                .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent)
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(env, style = MaterialTheme.typography.labelMedium)
-                            if (isSelected) {
-                                Icon(Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    icon, 
+                                    contentDescription = env, 
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    env, 
+                                    style = MaterialTheme.typography.titleMedium, 
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
                             }
+                            if (isSelected) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                            }
+                        }
+                        if (index < environments.size - 1) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Logout/Wipe button
             Button(
@@ -3715,11 +3886,16 @@ fun SettingsScreen(viewModel: SproutViewModel) {
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp)
+                    .height(64.dp)
+                    .shadowAmbient(),
+                shape = RoundedCornerShape(32.dp)
             ) {
-                Text("Log Out Sprout", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold)
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout", tint = MaterialTheme.colorScheme.onErrorContainer)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("Log Out Sprout", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold)
             }
+            
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
@@ -3743,25 +3919,49 @@ fun PlantDetailScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             // Header Image Box with overlay
+            val plantScale = when(plant.stage.lowercase()) {
+                "seed", "spore", "cosmic seed" -> 0.35f
+                "seedling", "sprout" -> 0.5f
+                "juvenile", "small plant", "cutting", "shoot", "bulb" -> 0.75f
+                "mature" -> 1.0f
+                "flowering", "majestic" -> 1.15f
+                else -> 1.0f
+            }
+            
+            val animatedPlantScale by animateFloatAsState(
+                targetValue = plantScale, 
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                label = "plant_growth_scale"
+            )
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .height(400.dp) // created space for the image to change and grow
+                    .clickable {
+                        viewModel.nurturePlant(plant.id) { success, msg ->
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
                     model = com.example.data.PlantUtils.getPlantImageUrl(plant, profile?.defaultEnvironment ?: "Tropical"),
                     contentDescription = plant.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .scale(animatedPlantScale)
                 )
 
                 // Navigation overlay actions buttons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 40.dp),
+                        .padding(horizontal = 24.dp, vertical = 40.dp)
+                        .align(Alignment.TopCenter),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top
                 ) {
                     IconButton(
                         onClick = { viewModel.navigateBack() },
@@ -3770,7 +3970,7 @@ fun PlantDetailScreen(
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.8f))
                     ) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black)
                     }
 
                     IconButton(
@@ -4220,7 +4420,7 @@ fun PurchaseSeedsScreen(viewModel: SproutViewModel) {
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
             }
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -4425,14 +4625,18 @@ fun SeedPackageCard(
 }
 
 // Minimalist generic shadows helpers matching Sprout requirements
-fun Modifier.shadowAmbient(): Modifier = this.shadowAmbientCustom(alpha = 0.08f)
-fun Modifier.shadowAmbientActive(): Modifier = this.shadowAmbientCustom(alpha = 0.12f)
+fun Modifier.shadowAmbient(cornerRadius: androidx.compose.ui.unit.Dp = 24.dp): Modifier = this.shadowAmbientCustom(alpha = 0.08f, cornerRadius = cornerRadius)
+fun Modifier.shadowAmbientActive(cornerRadius: androidx.compose.ui.unit.Dp = 24.dp): Modifier = this.shadowAmbientCustom(alpha = 0.12f, cornerRadius = cornerRadius)
 
-fun Modifier.shadowAmbientCustom(alpha: Float): Modifier = this
-    .background(
-        color = Color.Transparent
+fun Modifier.shadowAmbientCustom(alpha: Float, cornerRadius: androidx.compose.ui.unit.Dp = 24.dp): Modifier = this
+    .shadow(
+        elevation = 16.dp,
+        shape = RoundedCornerShape(cornerRadius),
+        clip = false,
+        ambientColor = Color(0xFF2E5A36).copy(alpha = alpha),
+        spotColor = Color(0xFF2E5A36).copy(alpha = 0.5f)
     )
-    .padding(bottom = 2.dp)
+
 
 @Composable
 fun SproutAdaptiveLogo(modifier: Modifier = Modifier) {
@@ -4577,11 +4781,10 @@ fun LoginScreen(viewModel: SproutViewModel) {
     var passcode by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     
-    var isRegisterMode by remember { mutableStateOf(false) }
+    val registeredProfiles by viewModel.registeredProfiles.collectAsState()
+    var isRegisterMode by remember(registeredProfiles.isEmpty()) { mutableStateOf(registeredProfiles.isEmpty()) }
     var selectedAvatarColor by remember { mutableStateOf(0xFF4CAF50.toInt()) } // Green default
     var selectedGrowthPref by remember { mutableStateOf("S-Curve Sigmoid") }
-    
-    val registeredProfiles by viewModel.registeredProfiles.collectAsState()
     val context = LocalContext.current
     
     val avatarColors = listOf(
@@ -5253,7 +5456,7 @@ fun CareGuidesScreen(viewModel: SproutViewModel) {
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Go back",
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -5932,7 +6135,7 @@ fun CareGuideContentBody(
                     enabled = userQuestion.isNotBlank()
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Send,
+                        imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Send question",
                         tint = if (userQuestion.isNotBlank()) Color.White else Color.White.copy(alpha = 0.5f)
                     )

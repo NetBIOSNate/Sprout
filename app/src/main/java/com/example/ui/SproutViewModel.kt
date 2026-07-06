@@ -16,6 +16,25 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import kotlin.random.Random
+
+enum class AlertType(val colorHex: String) {
+    WATER("#2196F3"),
+    FERTILIZER("#4CAF50"),
+    SUNLIGHT("#FF9800"),
+    GENERAL("#9E9E9E")
+}
+
+data class PlantAlert(
+    val id: String,
+    val message: String,
+    val type: AlertType
+)
 
 sealed class Screen {
     object Home : Screen()
@@ -54,14 +73,22 @@ class SproutViewModel(application: Application) : AndroidViewModel(application) 
     private val _realOrMakeBelieveTab = MutableStateFlow("Real") // "Real", "Make-Believe"
     val realOrMakeBelieveTab: StateFlow<String> = _realOrMakeBelieveTab.asStateFlow()
 
-    private val _plantAlerts = MutableStateFlow<List<String>>(emptyList())
-    val plantAlerts: StateFlow<List<String>> = _plantAlerts.asStateFlow()
+    private val _plantAlerts = MutableStateFlow<List<PlantAlert>>(emptyList())
+    val plantAlerts: StateFlow<List<PlantAlert>> = _plantAlerts.asStateFlow()
     
     private val dismissedAlerts = mutableSetOf<String>()
 
-    fun dismissAlert(alert: String) {
-        dismissedAlerts.add(alert)
-        _plantAlerts.value = _plantAlerts.value.filter { it != alert }
+    private val CHANNEL_ID = "sprout_notifications"
+
+    fun dismissAlert(alertId: String) {
+        dismissedAlerts.add(alertId)
+        _plantAlerts.value = _plantAlerts.value.filter { it.id != alertId }
+    }
+
+    private fun addAlert(alert: PlantAlert) {
+        if (!_plantAlerts.value.any { it.id == alert.id } && !dismissedAlerts.contains(alert.id)) {
+            _plantAlerts.value = _plantAlerts.value + alert
+        }
     }
 
     init {
@@ -92,7 +119,7 @@ class SproutViewModel(application: Application) : AndroidViewModel(application) 
             refreshProfilesList()
         }
 
-        // Watering schedule simulation loop
+        // Watering schedule loop based on lastWatered timestamp
         viewModelScope.launch {
             while (true) {
                 kotlinx.coroutines.delay(10000) // Check every 10 seconds for demo purposes
@@ -100,32 +127,54 @@ class SproutViewModel(application: Application) : AndroidViewModel(application) 
                 val activeProfile = repository.userProfile.firstOrNull()
                 val notificationsEnabled = activeProfile?.notificationEnabled ?: true
                 
+                val currentTimeMs = System.currentTimeMillis()
+
                 currentPlants.filter { it.isCollected }.forEach { plant ->
-                    val drainRate = when(plant.waterLevel.lowercase()) {
-                        "high" -> 0.05f // dries faster
-                        "low" -> 0.01f  // dries slower
-                        else -> 0.03f
+                    // For demo purposes, define how quickly a plant dries out in milliseconds based on its water level
+                    val dryTimeMs: Long = when(plant.waterLevel.lowercase()) {
+                        "high" -> 30_000L // Dries out very quickly (30 seconds) for high water needs
+                        "low" -> 120_000L // Dries out slowly (120 seconds) for low water needs
+                        else -> 60_000L // Medium (60 seconds)
                     }
                     
-                    if (plant.waterProgress > 0f) {
-                        val newProgress = (plant.waterProgress - drainRate).coerceAtLeast(0f)
-                        val newNeeds = if (newProgress < 0.4f) "Thirsty" else "Good"
-                        
-                        if (newProgress < 0.4f) {
-                            // Trigger alert if notification is enabled globally and for this plant
-                            if (notificationsEnabled && plant.isNotificationEnabled) {
-                                val alertMsg = "${plant.name} is thirsty! Time to water."
-                                if (!_plantAlerts.value.contains(alertMsg) && !dismissedAlerts.contains(alertMsg)) {
-                                    _plantAlerts.value = _plantAlerts.value + alertMsg
-                                }
-                            }
-                        }
-                        
-                        repository.updatePlant(plant.copy(
-                            waterProgress = newProgress,
-                            waterNeeds = newNeeds
-                        ))
+                    val timeSinceLastWatered = if (plant.lastWatered == 0L) dryTimeMs else currentTimeMs - plant.lastWatered
+                    
+                    val newProgress = if (plant.lastWatered == 0L) {
+                        0f
+                    } else {
+                        (1f - (timeSinceLastWatered.toFloat() / dryTimeMs.toFloat())).coerceIn(0f, 1f)
                     }
+
+                    val newNeeds = if (newProgress < 0.4f) "Thirsty" else "Good"
+                    
+                    val waterAlertId = "${plant.id}_water"
+                    val waterAlertMsg = "${plant.name} is thirsty! Time to water."
+                    
+                    if (newProgress < 0.4f) {
+                        if (notificationsEnabled && plant.isNotificationEnabled) {
+                            addAlert(PlantAlert(waterAlertId, waterAlertMsg, AlertType.WATER))
+                        } else {
+                            _plantAlerts.value = _plantAlerts.value.filter { it.id != waterAlertId }
+                        }
+                    } else {
+                        dismissedAlerts.remove(waterAlertId)
+                        _plantAlerts.value = _plantAlerts.value.filter { it.id != waterAlertId }
+                    }
+                    
+                    // Simulate random fertilizer and sunlight needs
+                    if (notificationsEnabled && plant.isNotificationEnabled) {
+                        if (Random.nextFloat() < 0.05f) {
+                            addAlert(PlantAlert("${plant.id}_sun", "${plant.name} needs some sunlight!", AlertType.SUNLIGHT))
+                        }
+                        if (Random.nextFloat() < 0.05f) {
+                            addAlert(PlantAlert("${plant.id}_fert", "${plant.name} could use some fertilizer.", AlertType.FERTILIZER))
+                        }
+                    }
+                    
+                    repository.updatePlant(plant.copy(
+                        waterProgress = newProgress,
+                        waterNeeds = newNeeds
+                    ))
                 }
             }
         }
@@ -160,11 +209,12 @@ class SproutViewModel(application: Application) : AndroidViewModel(application) 
             repository.waterPlant(plantId)
             val plant = repository.allPlants.firstOrNull()?.find { it.id == plantId }
             if (plant != null) {
-                val alertMsg = "${plant.name} is thirsty! Time to water."
-                dismissedAlerts.remove(alertMsg)
-                _plantAlerts.value = _plantAlerts.value.filter { it != alertMsg }
+                val waterAlertId = "${plant.id}_water"
+                dismissedAlerts.remove(waterAlertId)
+                _plantAlerts.value = _plantAlerts.value.filter { it.id != waterAlertId }
             }
             com.example.SproutWidgetProvider.triggerUpdate(getApplication())
+            com.example.LargeFlowerWidgetProvider.triggerUpdate(getApplication())
         }
     }
 
@@ -172,6 +222,7 @@ class SproutViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.updateWidgetActive(plantId)
             com.example.SproutWidgetProvider.triggerUpdate(getApplication())
+            com.example.LargeFlowerWidgetProvider.triggerUpdate(getApplication())
         }
     }
 
@@ -186,6 +237,7 @@ class SproutViewModel(application: Application) : AndroidViewModel(application) 
             val success = repository.purchasePlant(plantId)
             if (success) {
                 com.example.SproutWidgetProvider.triggerUpdate(getApplication())
+            com.example.LargeFlowerWidgetProvider.triggerUpdate(getApplication())
                 onSuccess()
             } else {
                 onFailure()
@@ -202,6 +254,10 @@ class SproutViewModel(application: Application) : AndroidViewModel(application) 
     fun updatePlant(plant: com.example.data.Plant) {
         viewModelScope.launch {
             repository.updatePlant(plant)
+            if (!plant.isNotificationEnabled) {
+                val waterAlertId = "${plant.id}_water"
+                _plantAlerts.value = _plantAlerts.value.filter { it.id != waterAlertId }
+            }
         }
     }
 
@@ -209,6 +265,7 @@ class SproutViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.resetPlantGrowth(plantId)
             com.example.SproutWidgetProvider.triggerUpdate(getApplication())
+            com.example.LargeFlowerWidgetProvider.triggerUpdate(getApplication())
         }
     }
 
@@ -223,6 +280,9 @@ class SproutViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val current = repository.userProfile.firstOrNull() ?: return@launch
             repository.updateProfile(current.copy(notificationEnabled = isEnabled))
+            if (!isEnabled) {
+                _plantAlerts.value = emptyList()
+            }
         }
     }
 
@@ -355,9 +415,11 @@ class SproutViewModel(application: Application) : AndroidViewModel(application) 
                 )
                 repository.updateProfile(updatedWithMatured)
                 com.example.SproutWidgetProvider.triggerUpdate(getApplication())
+            com.example.LargeFlowerWidgetProvider.triggerUpdate(getApplication())
                 onFinished(true, "Incredible! Your plant sprouted to $nextStage and earned +150 bonus seeds!")
             } else {
                 com.example.SproutWidgetProvider.triggerUpdate(getApplication())
+            com.example.LargeFlowerWidgetProvider.triggerUpdate(getApplication())
                 onFinished(true, "Your nurturing accelerated the local growth pattern! Nurtured to $nextStage.")
             }
         }

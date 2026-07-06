@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -36,6 +37,19 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/sprout_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".LargeFlowerWidgetProvider"
+            android:exported="true"
+            android:label="Large Sprout Widget">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.sprout.ACTION_WATER_LARGE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/large_flower_widget_info" />
         </receiver>
     </application>
 

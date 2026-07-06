@@ -102,6 +102,7 @@ class SproutWidgetProvider : AppWidgetProvider() {
 
                     withContext(Dispatchers.Main) {
                         triggerUpdate(context)
+                        LargeFlowerWidgetProvider.triggerUpdate(context)
                     }
                 }
             }

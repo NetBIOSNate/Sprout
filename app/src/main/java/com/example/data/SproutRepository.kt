@@ -25,24 +25,6 @@ class SproutRepository(
             )
         }
 
-        val existingProfile = userProfileDao.getUserProfile()
-        if (existingProfile == null) {
-            userProfileDao.insertUserProfile(
-                UserProfile(
-                    id = 1,
-                    name = "Jane Doe",
-                    seedBalance = 2450,
-                    totalWaterings = 1204,
-                    wateringStreak = 14,
-                    totalDaysWatered = 128,
-                    plantsMatured = 18,
-                    seedsPlanted = 56,
-                    activePlantId = "monstera_deliciosa",
-                    isDarkMode = false
-                )
-            )
-        }
-
         val existingPlants = plantDao.getAllPlantsFlow().firstOrNull()
         if (existingPlants == null || existingPlants.size < 10) {
             val defaultPlantsRaw = listOf(
@@ -56,7 +38,7 @@ class SproutRepository(
                     waterLevel = "Medium",
                     soil = "Well-draining chunky mix. Peat moss, perlite, and orchid bark work well.",
                     stage = "Juvenile",
-                    imageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuBuZUBUvMkpeobHcE92Cl-r4rYxDnF_gLMs70VV2c9WZsWEMSpXbDVligaw3HTANhE17G2fKXX5U-3sQUnXqDg-eIumUeuADz4akvXp_dVXjB29hRkTHqY31az0OsJjFr2MPgmdzwPCDu9-xbzsJiOprswOY7LfyDIhyIdUkvDYOYEXVozUB4ZJavLM0A_8f4TRPVzZrr4DJnbvtEoKSaXiu9kMcZUrCHjpDcoIAK3-jia4vVkQPlmkj-SCSUPMZ4xvHdmbgCTLeOs",
+                    imageUrl = "https://image.pollinations.ai/prompt/Monstera%20Deliciosa%20digital%20art?width=512&height=512&nologo=true",
                     isCollected = true,
                     isWishlist = false,
                     waterNeeds = "Good",
@@ -76,7 +58,7 @@ class SproutRepository(
                     waterLevel = "Medium",
                     soil = "Peat moss with excessive perlite for aeration.",
                     stage = "Seedling",
-                    imageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuAQ_hLnQZvLsJ9Cv3xtBmA7_FzJvGMJjYtfSdlvyckvpuOydfqJtyDcfZac1H2rwKslgnwJ-H-3lx-TjiRYmqwM7__Pvor45UAoPzRlS4arpngwzR6pJEcWydsyKZ07_NOn3WYJ5f9R92SWefwrRsMcbqHzhS4flewWtZwTGIilb5uvyzf3fseTXFGLe4xd_0mRUy8huvxzzrfWzpi1NLSsB6Da0a90jvNhVLxkJVJHlAT7SDKFSEV1Lsamh3I8IAFDL1u5u7_e-UA",
+                    imageUrl = "https://image.pollinations.ai/prompt/Pilea%20digital%20art?width=512&height=512&nologo=true",
                     isCollected = true,
                     isWishlist = false,
                     waterNeeds = "Thirsty",
@@ -676,7 +658,7 @@ class SproutRepository(
                     waterLevel = "Medium",
                     soil = "Loam",
                     stage = "Seedling",
-                    imageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuAQ_hLnQZvLsJ9Cv3xtBmA7_FzJvGMJjYtfSdlvyckvpuOydfqJtyDcfZac1H2rwKslgnwJ-H-3lx-TjiRYmqwM7__Pvor45UAoPzRlS4arpngwzR6pJEcWydsyKZ07_NOn3WYJ5f9R92SWefwrRsMcbqHzhS4flewWtZwTGIilb5uvyzf3fseTXFGLe4xd_0mRUy8huvxzzrfWzpi1NLSsB6Da0a90jvNhVLxkJVJHlAT7SDKFSEV1Lsamh3I8IAFDL1u5u7_e-UA",
+                    imageUrl = "https://image.pollinations.ai/prompt/Crimson%20Rose%20digital%20art?width=512&height=512&nologo=true",
                     isCollected = false,
                     isWishlist = false,
                     waterNeeds = "Thirsty",
@@ -696,7 +678,7 @@ class SproutRepository(
                     waterLevel = "Low",
                     soil = "Peat",
                     stage = "Spore",
-                    imageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuAQ_hLnQZvLsJ9Cv3xtBmA7_FzJvGMJjYtfSdlvyckvpuOydfqJtyDcfZac1H2rwKslgnwJ-H-3lx-TjiRYmqwM7__Pvor45UAoPzRlS4arpngwzR6pJEcWydsyKZ07_NOn3WYJ5f9R92SWefwrRsMcbqHzhS4flewWtZwTGIilb5uvyzf3fseTXFGLe4xd_0mRUy8huvxzzrfWzpi1NLSsB6Da0a90jvNhVLxkJVJHlAT7SDKFSEV1Lsamh3I8IAFDL1u5u7_e-UA",
+                    imageUrl = "https://image.pollinations.ai/prompt/Azure%20Fern%20digital%20art?width=512&height=512&nologo=true",
                     isCollected = false,
                     isWishlist = false,
                     waterNeeds = "Thirsty",
@@ -716,7 +698,7 @@ class SproutRepository(
                     waterLevel = "Low",
                     soil = "Sand",
                     stage = "Seed",
-                    imageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuAQ_hLnQZvLsJ9Cv3xtBmA7_FzJvGMJjYtfSdlvyckvpuOydfqJtyDcfZac1H2rwKslgnwJ-H-3lx-TjiRYmqwM7__Pvor45UAoPzRlS4arpngwzR6pJEcWydsyKZ07_NOn3WYJ5f9R92SWefwrRsMcbqHzhS4flewWtZwTGIilb5uvyzf3fseTXFGLe4xd_0mRUy8huvxzzrfWzpi1NLSsB6Da0a90jvNhVLxkJVJHlAT7SDKFSEV1Lsamh3I8IAFDL1u5u7_e-UA",
+                    imageUrl = "https://image.pollinations.ai/prompt/Lunar%20Cactus%20digital%20art?width=512&height=512&nologo=true",
                     isCollected = false,
                     isWishlist = false,
                     waterNeeds = "Thirsty",
@@ -736,7 +718,7 @@ class SproutRepository(
                     waterLevel = "Medium",
                     soil = "Loam",
                     stage = "Seed",
-                    imageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuAQ_hLnQZvLsJ9Cv3xtBmA7_FzJvGMJjYtfSdlvyckvpuOydfqJtyDcfZac1H2rwKslgnwJ-H-3lx-TjiRYmqwM7__Pvor45UAoPzRlS4arpngwzR6pJEcWydsyKZ07_NOn3WYJ5f9R92SWefwrRsMcbqHzhS4flewWtZwTGIilb5uvyzf3fseTXFGLe4xd_0mRUy8huvxzzrfWzpi1NLSsB6Da0a90jvNhVLxkJVJHlAT7SDKFSEV1Lsamh3I8IAFDL1u5u7_e-UA",
+                    imageUrl = "https://image.pollinations.ai/prompt/Solar%20Sunflower%20digital%20art?width=512&height=512&nologo=true",
                     isCollected = false,
                     isWishlist = false,
                     waterNeeds = "Thirsty",
@@ -756,7 +738,7 @@ class SproutRepository(
                     waterLevel = "High",
                     soil = "Bark",
                     stage = "Cosmic Seed",
-                    imageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuAQ_hLnQZvLsJ9Cv3xtBmA7_FzJvGMJjYtfSdlvyckvpuOydfqJtyDcfZac1H2rwKslgnwJ-H-3lx-TjiRYmqwM7__Pvor45UAoPzRlS4arpngwzR6pJEcWydsyKZ07_NOn3WYJ5f9R92SWefwrRsMcbqHzhS4flewWtZwTGIilb5uvyzf3fseTXFGLe4xd_0mRUy8huvxzzrfWzpi1NLSsB6Da0a90jvNhVLxkJVJHlAT7SDKFSEV1Lsamh3I8IAFDL1u5u7_e-UA",
+                    imageUrl = "https://image.pollinations.ai/prompt/Nebula%20Orchid%20digital%20art?width=512&height=512&nologo=true",
                     isCollected = false,
                     isWishlist = false,
                     waterNeeds = "Thirsty",
@@ -776,7 +758,7 @@ class SproutRepository(
                     waterLevel = "High",
                     soil = "Mud",
                     stage = "Bulb",
-                    imageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuAQ_hLnQZvLsJ9Cv3xtBmA7_FzJvGMJjYtfSdlvyckvpuOydfqJtyDcfZac1H2rwKslgnwJ-H-3lx-TjiRYmqwM7__Pvor45UAoPzRlS4arpngwzR6pJEcWydsyKZ07_NOn3WYJ5f9R92SWefwrRsMcbqHzhS4flewWtZwTGIilb5uvyzf3fseTXFGLe4xd_0mRUy8huvxzzrfWzpi1NLSsB6Da0a90jvNhVLxkJVJHlAT7SDKFSEV1Lsamh3I8IAFDL1u5u7_e-UA",
+                    imageUrl = "https://image.pollinations.ai/prompt/Ghost%20Lily%20digital%20art?width=512&height=512&nologo=true",
                     isCollected = false,
                     isWishlist = false,
                     waterNeeds = "Thirsty",
@@ -796,7 +778,7 @@ class SproutRepository(
                     waterLevel = "Low",
                     soil = "Ash",
                     stage = "Seedling",
-                    imageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuAQ_hLnQZvLsJ9Cv3xtBmA7_FzJvGMJjYtfSdlvyckvpuOydfqJtyDcfZac1H2rwKslgnwJ-H-3lx-TjiRYmqwM7__Pvor45UAoPzRlS4arpngwzR6pJEcWydsyKZ07_NOn3WYJ5f9R92SWefwrRsMcbqHzhS4flewWtZwTGIilb5uvyzf3fseTXFGLe4xd_0mRUy8huvxzzrfWzpi1NLSsB6Da0a90jvNhVLxkJVJHlAT7SDKFSEV1Lsamh3I8IAFDL1u5u7_e-UA",
+                    imageUrl = "https://image.pollinations.ai/prompt/Volcanic%20Bonsai%20digital%20art?width=512&height=512&nologo=true",
                     isCollected = false,
                     isWishlist = false,
                     waterNeeds = "Thirsty",
@@ -867,7 +849,7 @@ class SproutRepository(
                     rarity = "Rare"
                 )
             )
-            val defaultPlants = defaultPlantsRaw.take(10)
+            val defaultPlants = defaultPlantsRaw
             val existingIds = existingPlants?.map { it.id }?.toSet() ?: emptySet()
             val newPlants = defaultPlants.filter { !existingIds.contains(it.id) }
             if (newPlants.isNotEmpty()) {
@@ -1023,8 +1005,10 @@ class SproutRepository(
             totalDaysWatered = 0,
             plantsMatured = 0,
             seedsPlanted = 0,
-            collectedPlantIds = "monstera_deliciosa",
-            wishlistPlantIds = ""
+            activePlantId = "monstera_deliciosa",
+            collectedPlantIds = "monstera_deliciosa,pilea,string_of_pearls,snake_plant",
+            wishlistPlantIds = "lunar_fern",
+            isDarkMode = false
         )
         userProfileDao.insertUserProfile(newProfile)
         return true

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Clay Soil Background (Reddish Brown) -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#B35D4A"/>
+        </shape>
+    </item>
+    <!-- High Water Indicator (Thick Deep Blue Border) -->
+    <item android:bottom="6dp" android:left="6dp" android:right="6dp" android:top="6dp">
+        <shape android:shape="rectangle">
+            <stroke android:width="6dp" android:color="#00008B"/>
+            <solid android:color="#00000000"/>
+        </shape>
+    </item>
+    <!-- Mature Stage (Large Green shape in the center) -->
+    <item android:gravity="center" android:width="96dp" android:height="96dp">
+        <shape android:shape="oval">
+            <solid android:color="#228B22"/>
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Sandy Soil Background (Yellowish/Tan) -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#EEDC9A"/>
+        </shape>
+    </item>
+    <!-- Low Water Indicator (Faint Blue Border) -->
+    <item android:bottom="2dp" android:left="2dp" android:right="2dp" android:top="2dp">
+        <shape android:shape="rectangle">
+            <stroke android:width="2dp" android:color="#80ADD8E6"/>
+            <solid android:color="#00000000"/>
+        </shape>
+    </item>
+    <!-- Seed Stage (Small Brown circle in the center) -->
+    <item android:gravity="center" android:width="24dp" android:height="24dp">
+        <shape android:shape="oval">
+            <solid android:color="#8B4513"/>
+        </shape>
+    </item>
+</layer-list>

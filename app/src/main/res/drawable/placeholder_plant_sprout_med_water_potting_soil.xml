@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Potting Soil Background (Dark Brown) -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#4B3621"/>
+        </shape>
+    </item>
+    <!-- Medium Water Indicator (Blue Border) -->
+    <item android:bottom="4dp" android:left="4dp" android:right="4dp" android:top="4dp">
+        <shape android:shape="rectangle">
+            <stroke android:width="4dp" android:color="#4169E1"/>
+            <solid android:color="#00000000"/>
+        </shape>
+    </item>
+    <!-- Sprout Stage (Small Green shape in the center) -->
+    <item android:gravity="center" android:width="48dp" android:height="48dp">
+        <shape android:shape="oval">
+            <solid android:color="#32CD32"/>
+        </shape>
+    </item>
+</layer-list>
