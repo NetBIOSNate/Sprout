@@ -984,7 +984,7 @@ class SproutRepository(
     }
 
     // MULTI-USER LOGIN & PROFILING SERVICE
-    suspend fun createProfile(name: String, username: String, passcode: String, avatarColor: Int, growthPref: String): Boolean {
+    suspend fun createProfile(name: String, username: String, passcode: String, avatarColor: Int): Boolean {
         val cleanUser = username.lowercase().trim()
         val exists = userProfileDao.getProfileByUsername(cleanUser)
         if (exists != null) return false
@@ -998,7 +998,6 @@ class SproutRepository(
             passcode = passcode,
             isActive = true,
             avatarColor = avatarColor,
-            growthPattern = growthPref,
             seedBalance = 500,
             totalWaterings = 0,
             wateringStreak = 0,

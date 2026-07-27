@@ -53,7 +53,6 @@ data class UserProfile(
     val collectedPlantIds: String = "monstera_deliciosa,pilea,string_of_pearls,snake_plant",
     val wishlistPlantIds: String = "lunar_fern",
     val avatarColor: Int = 0xFF4CAF50.toInt(),
-    val growthPattern: String = "Fibonacci Spiral", // "Fibonacci Spiral", "Fractal Branching", "S-Curve Sigmoid"
     val xp: Int = 0,
     val userLevel: Int = 1
 )

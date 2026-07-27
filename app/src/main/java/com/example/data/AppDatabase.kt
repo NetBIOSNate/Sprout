@@ -10,7 +10,7 @@ import androidx.room.migration.Migration
 
 @Database(
     entities = [Plant::class, UserProfile::class, Friend::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

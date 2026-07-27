@@ -311,12 +311,11 @@ class SproutViewModel(application: Application) : AndroidViewModel(application) 
         username: String,
         passcode: String,
         avatarColor: Int,
-        growthPref: String,
         onSuccess: () -> Unit,
         onFailure: (String) -> Unit
     ) {
         viewModelScope.launch {
-            val success = repository.createProfile(name, username, passcode, avatarColor, growthPref)
+            val success = repository.createProfile(name, username, passcode, avatarColor)
             if (success) {
                 refreshProfilesList()
                 onSuccess()
